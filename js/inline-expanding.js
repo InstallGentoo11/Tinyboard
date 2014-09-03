@@ -13,7 +13,80 @@
  */
 
 onready(function(){
+
+	$(document).on('imageexpand', '.image-expand:not(.init)', function() {
+		var trigger = $(this);
+		var img = $('img', trigger);
+		var fullSrc = trigger.prop('href');
+
+		if(fullSrc.match(/\.webm$/i)) {
+			trigger.click(function() {
+				if(trigger.hasClass('expanded')) {
+					img.show();
+
+					$('video', trigger).remove();
+				}
+				else {
+					img.hide();
+
+					var video = $('<video loop autoplay />');
+					video.prop('src', fullSrc);
+					video.appendTo(trigger);
+				}
+
+				trigger.toggleClass('expanded');
+				
+				return false;
+			});
+		}
+		else {
+			var src = img.prop('src');
+			var width = img.width();
+			var height = img.height();
+
+			img.load(function() {
+				img.css({ opacity: 1 });
+			});
+
+			trigger.click(function() {
+				if(trigger.hasClass('expanded')) {
+					img.prop('src', src);
+					img.css({
+						width: width,
+						height: height
+					});
+				}
+				else {
+					img.prop('src', fullSrc);
+					img.css({
+						width: 'auto',
+						height: 'auto'
+					});
+
+					if(img.width() === width) {
+						img.css({ opacity: 0 });
+					}
+				}
+
+				trigger.toggleClass('expanded');
+
+				return false;
+			});
+		}
+
+		trigger.addClass('init');
+
+	}).find('.image-expand:not(.init)').trigger('imageexpand');
+
+	// allow to work with auto-reload.js, etc.
+	$(document).bind('new_post', function(e, post) {
+		$('.image-expand:not(.init)').trigger('imageexpand');
+	});
+
+
 	var inline_expand_post = function() {
+
+		return;
 		var link = this.getElementsByTagName('a');
 
 		for (var i = 0; i < link.length; i++) {
@@ -51,17 +124,6 @@ onready(function(){
 				}
 			}
 		}
-	}
-
-	if (window.jQuery) {
-		$('div[id^="thread_"]').each(inline_expand_post);
-
-		// allow to work with auto-reload.js, etc.
-		$(document).bind('new_post', function(e, post) {
-			inline_expand_post.call(post);
-		});
-	} else {
-		inline_expand_post.call(document);
 	}
 
 });

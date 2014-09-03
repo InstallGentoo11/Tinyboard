@@ -500,8 +500,59 @@ if (isset($_POST['delete'])) {
 		do_filters($post);
 	}
 	
-	if ($post['has_file']) {	
-		if ($is_an_image && $config['ie_mime_type_detection'] !== false) {
+	if ($post['has_file']) {
+		if(strtolower($post['extension']) === 'webm') {
+			$probe = sprintf('ffprobe -v quiet -print_format json -show_format -show_streams %s', escapeshellarg($upload));
+			exec($probe, $output, $code);
+
+			if($code !== 0) {
+				error($config['error']['invalidimg']);
+			}
+
+			$output = implode(' ', $output);
+			$output = json_decode($output);
+
+			$srcWidth = false;
+			$srcHeight = false;
+
+			foreach($output->streams as $stream) {
+				if($stream->codec_type === 'video') {
+					$srcWidth = $stream->width;
+					$srcHeight = $stream->height;
+					break;
+				}
+			}
+
+			if(!$srcWidth || !$srcHeight) {
+				error($config['error']['invalidimg']);
+			}
+			
+			if($srcWidth > $config['max_width'] || $srcHeight > $config['max_height']) {
+				error($config['error']['maxsize']);
+			}
+
+			$post['width'] = $srcWidth;
+			$post['height'] = $srcHeight;
+
+			$thumbWidth = $post['op'] ? $config['thumb_op_width'] : $config['thumb_width'];
+			$thumbHeight = ($srcHeight / $srcWidth) * $thumbWidth;
+
+			$maxThumbHeight = $post['op'] ? $config['thumb_op_height'] : $config['thumb_height'];
+			if($thumbHeight > $maxThumbHeight) {
+				$thumbHeight = $maxThumbHeight;
+				$thumbWidth = ($srcWidth / $srcHeight) * $thumbHeight;
+			}
+
+			$post['thumbwidth'] = $thumbWidth;
+			$post['thumbheight'] = $thumbHeight;
+
+			$ffmpeg = sprintf('ffmpeg -i %s -vframes 1 -y -vf scale=%d:%d %s', escapeshellarg($upload), $thumbWidth, $thumbHeight, escapeshellarg($post['thumb']));
+			exec($ffmpeg, $output, $code);
+			if($code !== 0) {
+				error('Could not generate thumbnail!');
+			}
+		}
+		elseif ($is_an_image && $config['ie_mime_type_detection'] !== false) {
 			// Check IE MIME type detection XSS exploit
 			$buffer = file_get_contents($upload, null, null, null, 255);
 			if (preg_match($config['ie_mime_type_detection'], $buffer)) {

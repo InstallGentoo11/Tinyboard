@@ -514,3 +514,9 @@ form.ban-appeal textarea {
         display: inline-block;
 	vertical-align: middle;
 }
+
+a.image-expand.expanded > video, a.image-expand.expanded > img {
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+}
