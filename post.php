@@ -523,10 +523,17 @@ if (isset($_POST['delete'])) {
 				}
 			}
 
-			if(!$srcWidth || !$srcHeight) {
+			if($output->format->duration > 1) {
+				$thumbTime = '00:00:01';
+			}
+			else {
+				$thumbTime = '00:00:00';
+			}
+
+			if(!$srcWidth || !$srcHeight || !$output->format) {
 				error($config['error']['invalidimg']);
 			}
-			
+
 			if($srcWidth > $config['max_width'] || $srcHeight > $config['max_height']) {
 				error($config['error']['maxsize']);
 			}
@@ -546,7 +553,7 @@ if (isset($_POST['delete'])) {
 			$post['thumbwidth'] = $thumbWidth;
 			$post['thumbheight'] = $thumbHeight;
 
-			$ffmpeg = sprintf('ffmpeg -i %s -vframes 1 -y -vf scale=%d:%d %s', escapeshellarg($upload), $thumbWidth, $thumbHeight, escapeshellarg($post['thumb']));
+			$ffmpeg = sprintf('ffmpeg -i %s -ss %s -vframes 1 -y -vf scale=%d:%d %s', escapeshellarg($upload), escapeshellarg($thumbTime), $thumbWidth, $thumbHeight, escapeshellarg($post['thumb']));
 			exec($ffmpeg, $output, $code);
 			if($code !== 0) {
 				error('Could not generate thumbnail!');
