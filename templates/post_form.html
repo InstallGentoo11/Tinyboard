@@ -72,7 +72,7 @@
 				{% trans %}File{% endtrans %}
 			</th>
 			<td>
-				<input type="file" name="file">
+				<input type="file" name="file"> <span>(max {{  config.max_filesize|filesize }})</span>
 				{% if config.allow_upload_by_url %}
 					<br>
 					<div style="float:none;text-align:left">
