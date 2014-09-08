@@ -1,7 +1,8 @@
 <?php
 
 $banners = array(
-	IMAGETYPE_PNG
+	IMAGETYPE_PNG,
+    IMAGETYPE_PNG
 );
 
 $banner = array_rand($banners);
