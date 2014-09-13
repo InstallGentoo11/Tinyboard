@@ -1,0 +1,17 @@
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,400,300,700);
+
+body {
+    background: #151515;
+    color: #E7E7E7;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 500;
+}
+
+div.post.reply {
+    background: #2B2B2B;
+    border-color: #313131;
+}
+
+p.intro span.name {
+    color: #e96a81;
+}
