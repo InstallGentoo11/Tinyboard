@@ -20,7 +20,14 @@ $banners = array(
     16 => IMAGETYPE_PNG,
     17 => IMAGETYPE_PNG,
     18 => IMAGETYPE_PNG,
-    19 => IMAGETYPE_PNG
+    19 => IMAGETYPE_PNG,
+    20 => IMAGETYPE_PNG,
+    21 => IMAGETYPE_PNG,
+    22 => IMAGETYPE_PNG,
+    23 => IMAGETYPE_PNG,
+    24 => IMAGETYPE_PNG,
+    24 => IMAGETYPE_PNG,
+    25 => IMAGETYPE_GIF
 );
 
 $banner = array_rand($banners);
