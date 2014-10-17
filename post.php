@@ -226,11 +226,13 @@ if (isset($_POST['delete'])) {
 			error($config['error']['noaccess']);
 	}
 	
+    /* doesn't fucking work
 	if (!$post['mod']) {
 		$post['antispam_hash'] = checkSpam(array($board['uri'], isset($post['thread']) && !($config['quick_reply'] && isset($_POST['quick-reply'])) ? $post['thread'] : ($config['try_smarter'] && isset($_POST['page']) ? 0 - (int)$_POST['page'] : null)));
 		if ($post['antispam_hash'] === true)
 			error($config['error']['spam']);
 	}
+    */
 	
 	if ($config['robot_enable'] && $config['robot_mute']) {
 		checkMute();
@@ -523,7 +525,7 @@ if (isset($_POST['delete'])) {
 				}
 			}
 
-			if($output->format->duration > 1) {
+			if($output->format->duration > 2) {
 				$thumbTime = '00:00:01';
 			}
 			else {
