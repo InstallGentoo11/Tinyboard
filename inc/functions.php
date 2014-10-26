@@ -368,9 +368,6 @@ function setupBoard($array) {
 	if (!file_exists($board['dir'] . $config['dir']['thumb']))
 		@mkdir($board['dir'] . $config['dir']['thumb'], 0777)
 			or error("Couldn't create " . $board['dir'] . $config['dir']['img'] . ". Check permissions.", true);
-	if (!file_exists($board['dir'] . $config['dir']['res']))
-		@mkdir($board['dir'] . $config['dir']['res'], 0777)
-			or error("Couldn't create " . $board['dir'] . $config['dir']['img'] . ". Check permissions.", true);
 }
 
 function openBoard($uri) {
@@ -1033,10 +1030,6 @@ function deletePost($id, $error_if_doesnt_exist=true, $rebuild_after=true) {
 	$query = prepare("DELETE FROM ``cites`` WHERE (`target_board` = :board AND (`target` = " . implode(' OR `target` = ', $ids) . ")) OR (`board` = :board AND (`post` = " . implode(' OR `post` = ', $ids) . "))");
 	$query->bindValue(':board', $board['uri']);
 	$query->execute() or error(db_error($query));
-	
-	if (isset($rebuild) && $rebuild_after) {
-		buildThread($rebuild);
-	}
 
 	return true;
 }
@@ -1344,72 +1337,6 @@ function checkMute() {
 	}
 }
 
-function buildIndex() {
-	global $board, $config, $build_pages;
-
-	$pages = getPages();
-	if (!$config['try_smarter'])
-		$antibot = create_antibot($board['uri']);
-
-	if ($config['api']['enabled']) {
-		$api = new Api();
-		$catalog = array();
-	}
-
-	for ($page = 1; $page <= $config['max_pages']; $page++) {
-		$filename = $board['dir'] . ($page == 1 ? $config['file_index'] : sprintf($config['file_page'], $page));
-
-		if ($config['try_smarter'] && isset($build_pages) && !empty($build_pages)
-			&& !in_array($page, $build_pages) && is_file($filename))
-			continue;
-		$content = index($page);
-		if (!$content)
-			break;
-
-		if ($config['try_smarter']) {
-			$antibot = create_antibot($board['uri'], 0 - $page);
-			$content['current_page'] = $page;
-		}
-		$antibot->reset();
-		$content['pages'] = $pages;
-		$content['pages'][$page-1]['selected'] = true;
-		$content['btn'] = getPageButtons($content['pages']);
-		$content['antibot'] = $antibot;
-
-		file_write($filename, Element('index.html', $content));
-		
-		// json api
-		if ($config['api']['enabled']) {
-			$threads = $content['threads'];
-			$json = json_encode($api->translatePage($threads));
-			$jsonFilename = $board['dir'] . ($page - 1) . '.json'; // pages should start from 0
-			file_write($jsonFilename, $json);
-
-			$catalog[$page-1] = $threads;
-		}
-	}
-
-	if ($page < $config['max_pages']) {
-		for (;$page<=$config['max_pages'];$page++) {
-			$filename = $board['dir'] . ($page==1 ? $config['file_index'] : sprintf($config['file_page'], $page));
-			file_unlink($filename);
-
-			$jsonFilename = $board['dir'] . ($page - 1) . '.json';
-			file_unlink($jsonFilename);
-		}
-	}
-
-	// json api catalog
-	if ($config['api']['enabled']) {
-		$json = json_encode($api->translateCatalog($catalog));
-		$jsonFilename = $board['dir'] . 'catalog.json';
-		file_write($jsonFilename, $json);
-	}
-
-	if ($config['try_smarter'])
-		$build_pages = array();
-}
-
 function buildJavascript() {
 	global $config;
 
@@ -1676,7 +1603,7 @@ function markup(&$body, $track_cites = false) {
 			if (isset($cited_posts[$cite])) {
 				$replacement = '<a onclick="highlightReply(\''.$cite.'\');" href="' .
 					$config['root'] . $board['dir'] . $config['dir']['res'] .
-					($cited_posts[$cite] ? $cited_posts[$cite] : $cite) . '.html#' . $cite . '">' .
+					($cited_posts[$cite] ? $cited_posts[$cite] : $cite) . '#' . $cite . '">' .
 					'&gt;&gt;' . $cite .
 					'</a>';
 
@@ -1702,7 +1629,7 @@ function markup(&$body, $track_cites = false) {
 			// Carry found posts from local board >>X links
 			foreach ($cited_posts as $cite => $thread) {
 				$cited_posts[$cite] = $config['root'] . $board['dir'] . $config['dir']['res'] .
-					($thread ? $thread : $cite) . '.html#' . $cite;
+					($thread ? $thread : $cite) . '#' . $cite;
 			}
 			
 			$cited_posts = array(
@@ -1747,7 +1674,7 @@ function markup(&$body, $track_cites = false) {
 				
 				while ($cite = $query->fetch(PDO::FETCH_ASSOC)) {
 					$cited_posts[$_board][$cite['id']] = $config['root'] . $board['dir'] . $config['dir']['res'] .
-						($cite['thread'] ? $cite['thread'] : $cite['id']) . '.html#' . $cite['id'];
+						($cite['thread'] ? $cite['thread'] : $cite['id']) . '#' . $cite['id'];
 				}
 			}
 			
@@ -1880,64 +1807,6 @@ function strip_combining_chars($str) {
 		$str .= $char;
 	}
 	return $str;
-}
-
-function buildThread($id, $return = false, $mod = false) {
-	global $board, $config, $build_pages;
-	$id = round($id);
-
-	if (event('build-thread', $id))
-		return;
-
-	if ($config['cache']['enabled'] && !$mod) {
-		// Clear cache
-		cache::delete("thread_index_{$board['uri']}_{$id}");
-		cache::delete("thread_{$board['uri']}_{$id}");
-	}
-
-	$query = prepare(sprintf("SELECT * FROM ``posts_%s`` WHERE (`thread` IS NULL AND `id` = :id) OR `thread` = :id ORDER BY `thread`,`id`", $board['uri']));
-	$query->bindValue(':id', $id, PDO::PARAM_INT);
-	$query->execute() or error(db_error($query));
-
-	while ($post = $query->fetch(PDO::FETCH_ASSOC)) {
-		if (!isset($thread)) {
-			$thread = new Thread($post, $mod ? '?/' : $config['root'], $mod);
-		} else {
-			$thread->add(new Post($post, $mod ? '?/' : $config['root'], $mod));
-		}
-	}
-
-	// Check if any posts were found
-	if (!isset($thread))
-		error($config['error']['nonexistant']);
-
-	$body = Element('thread.html', array(
-		'board' => $board,
-		'thread' => $thread,
-		'body' => $thread->build(),
-		'config' => $config,
-		'id' => $id,
-		'mod' => $mod,
-		'antibot' => $mod || $return ? false : create_antibot($board['uri'], $id),
-		'boardlist' => createBoardlist($mod),
-		'return' => ($mod ? '?' . $board['url'] . $config['file_index'] : $config['root'] . $board['dir'] . $config['file_index'])
-	));
-
-	if ($config['try_smarter'] && !$mod)
-		$build_pages[] = thread_find_page($id);
-
-	if ($return)
-		return $body;
-
-	file_write($board['dir'] . $config['dir']['res'] . sprintf($config['file_page'], $id), $body);
-
-	// json api
-	if ($config['api']['enabled']) {
-		$api = new Api();
-		$json = json_encode($api->translateThread($thread));
-		$jsonFilename = $board['dir'] . $config['dir']['res'] . $id . '.json';
-		file_write($jsonFilename, $json);
-	}
 }
 
 function rrmdir($dir) {
@@ -2137,4 +2006,59 @@ function shell_exec_error($command, $suppress_stdout = false) {
 	}
 
 	return $return === 'TB_SUCCESS' ? false : $return;
+}
+
+function renderThread($threadId, $mod, $jsonOutput) {
+    global $board, $config;
+
+    $query = prepare(sprintf("SELECT * FROM ``posts_%s`` WHERE (`thread` IS NULL AND `id` = :id) OR `thread` = :id ORDER BY `thread`,`id`", $board['uri']));
+    $query->bindValue(':id', $threadId, PDO::PARAM_INT);
+    $query->execute() or error(db_error($query));
+
+    while ($post = $query->fetch(PDO::FETCH_ASSOC)) {
+        if (!isset($thread)) {
+            $thread = new Thread($post, $mod ? '?/' : $config['root'], $mod);
+        } else {
+            $thread->add(new Post($post, $mod ? '?/' : $config['root'], $mod));
+        }
+    }
+
+    // Check if any posts were found
+    if (!isset($thread))
+        error($config['error']['nonexistant']);
+
+    $page = array(
+        'board' => $board,
+        'thread' => $thread,
+        'body' => $thread->build(),
+        'config' => $config,
+        'id' => $threadId,
+        'mod' => $mod,
+        'antibot' => false,
+        'boardlist' => createBoardlist($mod),
+        'return' => ($mod ? '?' . $board['url'] . $config['file_index'] : $config['root'] . $board['dir'] . $config['file_index'])
+    );
+
+    if(!$jsonOutput) {
+        echo Element('thread.html', $page);
+    }
+    else {
+        $api = new Api();
+        $json = json_encode($api->translateThread($thread));
+        outputJson($json);
+    }
+}
+
+function outputJson($json) {
+    ob_end_clean();
+
+    if(function_exists('ob_gzhandler')) {
+        ob_start('ob_gzhandler');
+    }
+    
+    header('Access-Control-Allow-Origin: *');
+    header('Content-Type: application/json');
+    echo $json;
+
+    ob_end_flush();
 }
