@@ -74,6 +74,9 @@ if (isset($_POST['delete'])) {
 			);
 		}
 	}
+	
+	buildIndex();
+
 
 	rebuildThemes('post-delete', $board['uri']);
 	
@@ -767,6 +770,8 @@ if (isset($_POST['delete'])) {
 		bumpThread($post['thread']);
 	}
 	
+	buildThread($post['op'] ? $id : $post['thread']);
+	
 	if ($config['try_smarter'] && $post['op'])
 		$build_pages = range(1, $config['max_pages']);
 	
@@ -774,7 +779,9 @@ if (isset($_POST['delete'])) {
 		clean();
 	
 	event('post-after', $post);
-    
+	
+	buildIndex();
+	
 	if (isset($_SERVER['HTTP_REFERER'])) {
 		// Tell Javascript that we posted successfully
 		if (isset($_COOKIE[$config['cookies']['js']]))

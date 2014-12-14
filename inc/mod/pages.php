@@ -500,6 +500,9 @@ function mod_new_board() {
 		if ($config['cache']['enabled'])
 			cache::delete('all_boards');
 		
+		// Build the board
+		buildIndex();
+		
 		rebuildThemes('boards');
 		
 		header('Location: ?/' . $board['uri'] . '/' . $config['file_index'], true, $config['redirect_http']);
@@ -719,8 +722,9 @@ function mod_view_thread($boardName, $thread) {
 	
 	if (!openBoard($boardName))
 		error($config['error']['noboard']);
-
-    renderThread($thread, $mod, false);
+	
+	$page = buildThread($thread, true, $mod);
+	echo $page;
 }
 
 function mod_ip_remove_note($ip, $id) {
@@ -990,6 +994,8 @@ function mod_lock($board, $unlock, $post) {
 	$query->execute() or error(db_error($query));
 	if ($query->rowCount()) {
 		modLog(($unlock ? 'Unlocked' : 'Locked') . " thread #{$post}");
+		buildThread($post);
+		buildIndex();
 	}
 	
 	if ($config['mod']['dismiss_reports_on_lock']) {
@@ -1022,6 +1028,8 @@ function mod_sticky($board, $unsticky, $post) {
 	$query->execute() or error(db_error($query));
 	if ($query->rowCount()) {
 		modLog(($unsticky ? 'Unstickied' : 'Stickied') . " thread #{$post}");
+		buildThread($post);
+		buildIndex();
 	}
 	
 	header('Location: ?/' . sprintf($config['board_path'], $board) . $config['file_index'], true, $config['redirect_http']);
@@ -1042,6 +1050,8 @@ function mod_bumplock($board, $unbumplock, $post) {
 	$query->execute() or error(db_error($query));
 	if ($query->rowCount()) {
 		modLog(($unbumplock ? 'Unbumplocked' : 'Bumplocked') . " thread #{$post}");
+		buildThread($post);
+		buildIndex();
 	}
 	
 	header('Location: ?/' . sprintf($config['board_path'], $board) . $config['file_index'], true, $config['redirect_http']);
@@ -1178,7 +1188,11 @@ function mod_move($originBoard, $postID) {
 		
 		modLog("Moved thread #${postID} to " . sprintf($config['board_abbreviation'], $targetBoard) . " (#${newID})", $originBoard);
 		
+		// build new thread
+		buildThread($newID);
+		
 		clean();
+		buildIndex();
 		
 		// trigger themes
 		rebuildThemes('post', $targetBoard);
@@ -1212,11 +1226,15 @@ function mod_move($originBoard, $postID) {
 			markup($post['body']);
 			
 			$botID = post($post);
+			buildThread($postID);
+			
+			buildIndex();
 			
 			header('Location: ?/' . sprintf($config['board_path'], $originBoard) . $config['dir']['res'] .sprintf($config['file_page'], $postID) .
 				'#' . $botID, true, $config['redirect_http']);
 		} else {
 			deletePost($postID);
+			buildIndex();
 			
 			openBoard($targetBoard);
 			header('Location: ?/' . sprintf($config['board_path'], $board['uri']) . $config['dir']['res'] . sprintf($config['file_page'], $newID), true, $config['redirect_http']);
@@ -1275,10 +1293,14 @@ function mod_ban_post($board, $delete, $post, $token = false) {
 			rebuildPost($post);
 			
 			modLog("Attached a public ban message to post #{$post}: " . utf8tohtml($_POST['message']));
+			buildThread($thread ? $thread : $post);
+			buildIndex();
 		} elseif (isset($_POST['delete']) && (int) $_POST['delete']) {
 			// Delete post
 			deletePost($post);
 			modLog("Deleted post #{$post}");
+			// Rebuild board
+			buildIndex();
 			// Rebuild themes
 			rebuildThemes('post-delete', $board);
 		}
@@ -1342,6 +1364,8 @@ function mod_edit_post($board, $edit_raw_html, $postID) {
 			modLog("Edited post #{$postID}");
 			rebuildPost($postID);
 		}
+		
+		buildIndex();
 
 		rebuildThemes('post', $board);
 		
@@ -1373,6 +1397,8 @@ function mod_delete($board, $post) {
 	deletePost($post);
 	// Record the action
 	modLog("Deleted post #{$post}");
+	// Rebuild board
+	buildIndex();
 	// Rebuild themes
 	rebuildThemes('post-delete', $board);
 	// Redirect
@@ -1393,6 +1419,8 @@ function mod_deletefile($board, $post) {
 	// Record the action
 	modLog("Deleted file from post #{$post}");
 	
+	// Rebuild board
+	buildIndex();
 	// Rebuild themes
 	rebuildThemes('post-delete', $board);
 	
@@ -1427,6 +1455,12 @@ function mod_spoiler_image($board, $post) {
 
 	// Record the action
 	modLog("Spoilered file from post #{$post}");
+
+	// Rebuild thread
+	buildThread($result['thread'] ? $result['thread'] : $post);
+
+	// Rebuild board
+	buildIndex();
 
 	// Rebuild themes
 	rebuildThemes('post-delete', $board);
@@ -1486,6 +1520,15 @@ function mod_deletebyip($boardName, $post, $global = false) {
 			$threads_to_rebuild[$post['board']][$post['thread']] = true;
 		else
 			$threads_deleted[$post['board']][$post['id']] = true;
+	}
+	
+	foreach ($threads_to_rebuild as $_board => $_threads) {
+		openBoard($_board);
+		foreach ($_threads as $_thread => $_dummy) {
+			if ($_dummy && !isset($threads_deleted[$_board][$_thread]))
+				buildThread($_thread);
+		}
+		buildIndex();
 	}
 	
 	if ($global) {
@@ -1914,6 +1957,7 @@ function mod_rebuild() {
 			$config['try_smarter'] = false;
 			
 			if (isset($_POST['rebuild_index'])) {
+				buildIndex();
 				$log[] = '<strong>' . sprintf($config['board_abbreviation'], $board['uri']) . '</strong>: Creating index pages';
 			}
 			
@@ -1921,6 +1965,14 @@ function mod_rebuild() {
 				$log[] = '<strong>' . sprintf($config['board_abbreviation'], $board['uri']) . '</strong>: Rebuilding <strong>' . $config['file_script'] . '</strong>';
 				buildJavascript();
 				$rebuilt_scripts[] = $config['file_script'];
+			}
+			
+			if (isset($_POST['rebuild_thread'])) {
+				$query = query(sprintf("SELECT `id` FROM ``posts_%s`` WHERE `thread` IS NULL", $board['uri'])) or error(db_error());
+				while ($post = $query->fetch(PDO::FETCH_ASSOC)) {
+					$log[] = '<strong>' . sprintf($config['board_abbreviation'], $board['uri']) . '</strong>: Rebuilding thread #' . $post['id'];
+					buildThread($post['id']);
+				}
 			}
 		}
 		

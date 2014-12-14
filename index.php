@@ -90,9 +90,56 @@ if(!$threadId) { // index page
     }
 }
 else { // thread page
-    renderThread($threadId, $mod, $jsonOutput);
+    $query = prepare(sprintf("SELECT * FROM ``posts_%s`` WHERE (`thread` IS NULL AND `id` = :id) OR `thread` = :id ORDER BY `thread`,`id`", $board['uri']));
+    $query->bindValue(':id', $threadId, PDO::PARAM_INT);
+    $query->execute() or error(db_error($query));
+
+    while ($post = $query->fetch(PDO::FETCH_ASSOC)) {
+        if (!isset($thread)) {
+            $thread = new Thread($post, $mod ? '?/' : $config['root'], $mod);
+        } else {
+            $thread->add(new Post($post, $mod ? '?/' : $config['root'], $mod));
+        }
+    }
+
+    // Check if any posts were found
+    if (!isset($thread))
+        error($config['error']['nonexistant']);
+
+    $page = array(
+        'board' => $board,
+        'thread' => $thread,
+        'body' => $thread->build(),
+        'config' => $config,
+        'id' => $threadId,
+        'mod' => $mod,
+        'antibot' => false,
+        'boardlist' => createBoardlist($mod),
+        'return' => ($mod ? '?' . $board['url'] . $config['file_index'] : $config['root'] . $board['dir'] . $config['file_index'])
+    );
+
+    if(!$jsonOutput) {
+        echo Element('thread.html', $page);
+    }
+    else {
+        $api = new Api();
+        $json = json_encode($api->translateThread($thread));
+        outputJson($json);
+    }
 }
 
+function outputJson($json) {
+    ob_end_clean();
 
+    if(function_exists('ob_gzhandler')) {
+        ob_start('ob_gzhandler');
+    }
+    
+    header('Access-Control-Allow-Origin: *');
+    header('Content-Type: application/json');
+    echo $json;
+
+    ob_end_flush();
+}
 
 ?>
