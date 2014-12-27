@@ -1,24 +1,17 @@
 @import url(http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,700italic,400,300,700);
 
-#best-girl {
-    background: url(http://fc06.deviantart.net/fs71/i/2014/011/c/8/sengoku_nadeko___snake_god_by_phluxxor-d6xy7mm.png) no-repeat;
-    background-size: 100% auto;
-    background-position: center bottom;
-    width: 300px;
-    height: 185px;
-    position: absolute;
-    right: 60px;
-    margin-top: -185px;
+body {
+    background: #151515;
+    color: #E7E7E7;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 500;
 }
 
-@media (max-width: 1000px) {
-    #best-girl {
-        right: 0;
-    }
+div.post.reply {
+    background: #2B2B2B;
+    border-color: #313131;
 }
 
-@media (max-width: 860px) {
-    #best-girl {
-        display: none;
-    }
+p.intro span.name {
+    color: #e96a81;
 }
