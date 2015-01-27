@@ -1,0 +1,59 @@
+body {
+    background: #fef url('img/fade-yotsubamoe.png') repeat-x 50% 0%;
+    color: #000000;
+}
+a:link, a:visited, p.intro a.email span.name {
+    color: #34345C;
+}
+a:link:hover {
+    color: #006;
+}
+a.post_no {
+    color: #000000;
+}
+div.post.reply {
+    background: #f0d6ee;
+    border-color: #d3b7d9;
+}
+div.post.reply.highlighted {
+    background: #f0c0b0;
+    border-color: #d3b7d9;
+}
+div.post.reply div.body a {
+    color: navy;
+}
+p.intro span.subject {
+    color: #006;
+}
+form table tr th {
+    background: #E8C;
+}
+div.ban h2 {
+    background: #FAE;
+    color: inherit;
+}
+div.ban {
+    border-color: #000;
+}
+div.ban p {
+    color: black;
+}
+div.pages {
+    background: #F0D6EE;
+    border-color: #D3B7D9;
+}
+div.pages a.selected {
+    color: #000;
+}
+hr {
+    border-color: #D3B7D9;
+}
+div.boardlist {
+    color: #A8A;
+}
+div.boardlist a {
+    color: #800;
+}
+table.modlog tr th {
+    background: #EAC;
+}

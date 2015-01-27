@@ -1,5 +1,5 @@
 <?php
 
-header('Location: http://www.fufufu.moe/a/');
+header('Location: https://fufufu.moe/a/');
 
 ?>
