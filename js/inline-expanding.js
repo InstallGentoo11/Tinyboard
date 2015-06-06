@@ -19,7 +19,7 @@ onready(function(){
 		var img = $('img', trigger);
 		var fullSrc = trigger.prop('href');
 
-		if(fullSrc.match(/\.webm$/i)) {
+		if(fullSrc.match(/\.(webm|mp4)$/i)) {
 			trigger.click(function() {
 				if(trigger.hasClass('expanded')) {
 					img.show();

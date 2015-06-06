@@ -503,7 +503,7 @@ if (isset($_POST['delete'])) {
 	}
 	
 	if ($post['has_file']) {
-		if(strtolower($post['extension']) === 'webm') {
+		if(in_array(strtolower($post['extension']), array('webm', 'mp4'))) {
 			$probe = sprintf('ffprobe -v quiet -print_format json -show_format -show_streams %s', escapeshellarg($upload));
 			exec($probe, $output, $code);
 
