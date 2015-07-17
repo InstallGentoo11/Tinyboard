@@ -1872,6 +1872,11 @@ function mod_new_pm($username) {
 	if (!hasPermission($config['mod']['create_pm']))
 		error($config['error']['noaccess']);
 	
+
+    if($username === 'admin') {
+        mail('anon@madokami.com', 'New PM on fufufu.moe', 'New PM on fufufu.moe');
+    }
+
 	$query = prepare("SELECT `id` FROM ``mods`` WHERE `username` = :username");
 	$query->bindValue(':username', $username);
 	$query->execute() or error(db_error($query));
