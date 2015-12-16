@@ -11,6 +11,11 @@ if (realpath($_SERVER['SCRIPT_FILENAME']) == str_replace('\\', '/', __FILE__)) {
 
 define('TINYBOARD', null);
 
+if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $_SERVER['REMOTE_ADDR'] = $_SERVER['HTTP_X_FORWARDED_FOR'];
+}
+
+
 $microtime_start = microtime(true);
 
 require_once 'inc/display.php';

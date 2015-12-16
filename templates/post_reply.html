@@ -33,7 +33,7 @@
 			 	style="{% if post.modifiers['flag style'] %}{{ post.modifiers['flag style'] }}{% else %}{{ config.flag_style }}{% endif %}"
 			 {% if post.modifiers['flag alt'] %}alt="{{ post.modifiers['flag alt'] | e('html_attr') }}" title="{{ post.modifiers['flag alt'] | e('html_attr') }}"{% endif %}>
 		{% endif %}
-		 <time datetime="{{ post.time|date('%Y-%m-%dT%H:%M:%S') }}{{ timezone() }}">{{ post.time|date(config.post_date) }}</time>
+		 <time datetime="{{ post.time|date('%Y-%m-%dT%H:%M:%S') }}{{ timezone() }}" data-faget="{{ config.post_date }}">{{ post.time|date(config.post_date) }}</time>
 	</label>
 	{% if config.poster_ids %}
 		 ID: {{ post.ip|poster_id(post.thread) }}

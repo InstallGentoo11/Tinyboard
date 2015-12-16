@@ -504,8 +504,12 @@ if (isset($_POST['delete'])) {
 	
 	if ($post['has_file']) {
 		if(in_array(strtolower($post['extension']), array('webm', 'mp4'))) {
-			$probe = sprintf('ffprobe -v quiet -print_format json -show_format -show_streams %s', escapeshellarg($upload));
+
+			//$probe = sprintf('ffprobe -v quiet -print_format json -show_format -show_streams %s', escapeshellarg($upload));
+			$probe = sprintf('avprobe -v quiet -of json -show_format -show_streams %s', escapeshellarg($upload));
 			exec($probe, $output, $code);
+
+            //var_dump($probe, $output, $code);exit;
 
 			if($code !== 0) {
 				error($config['error']['invalidimg']);
@@ -555,7 +559,8 @@ if (isset($_POST['delete'])) {
 			$post['thumbwidth'] = $thumbWidth;
 			$post['thumbheight'] = $thumbHeight;
 
-			$ffmpeg = sprintf('ffmpeg -i %s -ss %s -vframes 1 -y -vf scale=%d:%d %s', escapeshellarg($upload), escapeshellarg($thumbTime), $thumbWidth, $thumbHeight, escapeshellarg($post['thumb']));
+			//$ffmpeg = sprintf('ffmpeg -i %s -ss %s -vframes 1 -y -vf scale=%d:%d %s', escapeshellarg($upload), escapeshellarg($thumbTime), $thumbWidth, $thumbHeight, escapeshellarg($post['thumb']));
+			$ffmpeg = sprintf('avconv -i %s -ss %s -vframes 1 -y -vf scale=%d:%d %s', escapeshellarg($upload), escapeshellarg($thumbTime), $thumbWidth, $thumbHeight, escapeshellarg($post['thumb']));
 			exec($ffmpeg, $output, $code);
 			if($code !== 0) {
 				error('Could not generate thumbnail!');
