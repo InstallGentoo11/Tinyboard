@@ -1,3 +1,5 @@
+/.vagrant
+
 # static html
 *.html
 
